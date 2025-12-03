@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3º Ciclo - Dashboard Educativo 2024/2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); transition: all 0.3s ease; }
+        .card:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .toggle-checkbox:checked { right: 0; border-color: #68D391; }
+        .toggle-checkbox:checked + .toggle-label { background-color: #68D391; }
+        .chart-container { position: relative; height: 400px; width: 100%; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+        .grade-btn.active { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+        .view-btn.active { background-color: #10b981; color: white; border-color: #10b981; }
+        
+        /* Diverging Bar Animation */
+        .bar-anim { animation: growWidth 1s ease-out forwards; }
+        @keyframes growWidth { from { width: 0; } to { width: var(--target-width); } }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fas fa-chart-line text-blue-600 text-2xl mr-3"></i>
+                    <h1 class="text-xl font-bold text-gray-900 tracking-tight">Monitorização 3º Ciclo <span class="text-sm font-normal text-gray-500 ml-2">2024/2025 vs 2023/2024</span></h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-xs text-right hidden sm:block">
+                        <p class="font-semibold text-gray-700">Dados do 3º Período</p>
+                        <p class="text-gray-500">Última atualização: Julho 2025</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Controls Section -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            
+            <!-- Grade Selector -->
+            <div class="bg-white p-1.5 rounded-lg shadow-sm inline-flex">
+                <button onclick="setGrade('7')" id="btn-7" class="grade-btn px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors focus:outline-none">7º Ano</button>
+                <button onclick="setGrade('8')" id="btn-8" class="grade-btn px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors focus:outline-none">8º Ano</button>
+                <button onclick="setGrade('9')" id="btn-9" class="grade-btn px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors focus:outline-none">9º Ano</button>
+                <button onclick="setGrade('ciclo')" id="btn-ciclo" class="grade-btn px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors focus:outline-none">Ciclo</button>
+            </div>
+
+            <!-- View Toggle -->
+            <div class="flex items-center bg-white p-1.5 rounded-lg shadow-sm">
+                <span class="mr-3 text-sm font-medium text-gray-500 pl-2">Vista:</span>
+                <button onclick="setView('standard')" id="btn-standard" class="view-btn px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors focus:outline-none flex items-center gap-2">
+                    <i class="fas fa-columns"></i> Padrão
+                </button>
+                <button onclick="setView('differential')" id="btn-differential" class="view-btn px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors focus:outline-none flex items-center gap-2">
+                    <i class="fas fa-exchange-alt"></i> Diferencial
+                </button>
+            </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Success Rate -->
+            <div class="card p-6 border-l-4 border-blue-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Taxa de Sucesso (≥3)</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-1" id="kpi-success">--%</h3>
+                    </div>
+                    <div class="p-3 bg-blue-50 rounded-full text-blue-600">
+                        <i class="fas fa-check-circle text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center">
+                    <span id="kpi-success-diff" class="text-sm font-medium flex items-center">
+                        --
+                    </span>
+                    <span class="text-gray-400 text-sm ml-2">vs ano anterior</span>
+                </div>
+            </div>
+
+            <!-- Quality Rate -->
+            <div class="card p-6 border-l-4 border-green-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Taxa de Qualidade (4-5)</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-1" id="kpi-quality">--%</h3>
+                    </div>
+                    <div class="p-3 bg-green-50 rounded-full text-green-600">
+                        <i class="fas fa-star text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center">
+                    <span id="kpi-quality-diff" class="text-sm font-medium flex items-center">
+                        --
+                    </span>
+                    <span class="text-gray-400 text-sm ml-2">vs ano anterior</span>
+                </div>
+            </div>
+
+            <!-- Negative Rate -->
+            <div class="card p-6 border-l-4 border-red-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Insucesso (1-2)</p>
+                        <h3 class="text-3xl font-bold text-gray-900 mt-1" id="kpi-failure">--%</h3>
+                    </div>
+                    <div class="p-3 bg-red-50 rounded-full text-red-600">
+                        <i class="fas fa-exclamation-triangle text-xl"></i>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center">
+                    <span id="kpi-failure-diff" class="text-sm font-medium flex items-center">
+                        --
+                    </span>
+                    <span class="text-gray-400 text-sm ml-2">vs ano anterior</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chart Section -->
+        <div class="card p-6 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-bold text-gray-800" id="main-chart-title">Distribuição por Disciplina</h2>
+                
+                <!-- Legend -->
+                <div id="chart-legend" class="flex gap-4 text-xs">
+                    <!-- Dynamic Legend -->
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="mainChart"></canvas>
+            </div>
+            <p class="text-xs text-gray-400 mt-4 text-center">* Dados referentes ao 3º Período. Ed. Moral e Religiosa excluída da análise gráfica principal.</p>
+        </div>
+
+        <!-- Subject Grid Details -->
+        <h3 class="text-xl font-bold text-gray-800 mb-6">Detalhe por Disciplina</h3>
+        <div id="subject-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Cards injected via JS -->
+        </div>
+
+    </main>
+
+    <footer class="bg-white border-t mt-12 py-8">
+        <div class="max-w-7xl mx-auto px-4 text-center text-gray-500 text-sm">
+            <p>&copy; 2025 Visualização de Dados Educativos - 3º Ciclo.</p>
+        </div>
+    </footer>
+
+    <script>
+        // --- DATA STORE (Extracted from PDF) ---
+        // Format: Levels [1, 2, 3, 4, 5]
+        const dataStore = {
+            '7': {
+                current: {
+                    'Português': [0.56, 19.44, 56.11, 17.78, 6.11],
+                    'Inglês': [0.00, 10.56, 50.56, 16.67, 22.22],
+                    'Espanhol': [0.00, 0.97, 33.01, 15.53, 50.49],
+                    'Francês': [0.00, 6.49, 44.16, 32.47, 16.88],
+                    'História': [0.00, 1.11, 31.11, 40.00, 27.78],
+                    'Geografia': [0.00, 2.78, 47.22, 14.44, 35.56],
+                    'Matemática': [0.00, 37.22, 40.56, 7.22, 15.00],
+                    'Ciências Naturais': [0.00, 4.44, 53.33, 31.67, 10.56],
+                    'Físico-Química': [0.00, 3.89, 48.89, 13.33, 33.89],
+                    'Ed. Visual': [0.00, 2.22, 23.33, 16.11, 56.11],
+                    'Ed. Física': [1.11, 1.11, 26.11, 22.22, 49.44]
+                },
+                diff: {
+                    'Português': [0.56, 2.05, 8.83, -2.04, -9.40],
+                    'Inglês': [0.00, -3.57, 9.79, 2.11, -8.33],
+                    'Espanhol': [0.00, -2.44, 8.01, 7.30, -12.88],
+                    'Francês': [0.00, 0.24, 1.45, -12.32, 10.63],
+                    'História': [0.00, 8.13, -16.17, 5.30, 18.00],
+                    'Geografia': [0.00, 0.60, -1.69, -1.40, 2.49],
+                    'Matemática': [-1.63, -6.80, 9.03, -1.30, 0.70],
+                    'Ciências Naturais': [0.00, 2.81, 15.38, -10.64, -8.55],
+                    'Físico-Química': [0.00, 8.61, -3.83, 5.63, 6.81],
+                    'Ed. Visual': [0.00, -0.65, -7.51, 3.19, -5.30], // Approx or derived
+                    'Ed. Física': [0.00, 1.83, 3.70, -6.10, 0.99] // Approx
+                }
+            },
+            '8': {
+                current: {
+                    'Português': [0.00, 11.52, 57.07, 22.51, 8.90],
+                    'Inglês': [0.00, 15.18, 49.21, 17.80, 17.80],
+                    'Espanhol': [0.00, 4.21, 38.95, 40.00, 16.84],
+                    'Francês': [0.00, 4.17, 61.46, 5.21, 29.17],
+                    'História': [0.00, 0.52, 56.54, 30.37, 12.57],
+                    'Geografia': [0.00, 0.52, 51.83, 13.61, 34.03],
+                    'Matemática': [0.00, 29.84, 40.31, 11.52, 18.32],
+                    'Ciências Naturais': [0.00, 5.76, 44.50, 14.14, 35.60],
+                    'Físico-Química': [0.00, 2.09, 48.17, 35.60, 14.14],
+                    'Ed. Visual': [0.00, 0.00, 17.28, 46.60, 36.13],
+                    'Ed. Física': [0.00, 2.63, 23.16, 26.84, 47.37]
+                },
+                diff: {
+                    'Português': [0.65, 12.41, 3.69, 2.27, 7.05],
+                    'Inglês': [0.00, 0.15, 10.56, -0.60, -9.81],
+                    'Espanhol': [0.00, 9.27, 0.75, -3.82, 12.35],
+                    'Francês': [0.00, -1.24, 7.40, 2.14, -8.31],
+                    'História': [0.00, 28.05, 16.79, 5.76, 4.49],
+                    'Geografia': [0.00, 0.70, 4.59, -0.32, -3.57],
+                    'Matemática': [0.00, -6.97, 1.65, 1.76, 3.54],
+                    'Ciências Naturais': [0.00, 3.31, 6.47, -14.09, 4.32],
+                    'Físico-Química': [0.00, 11.57, -7.11, 15.11, 3.58],
+                    'Ed. Visual': [0.00, 7.36, -29.35, 9.17, 27.54],
+                    'Ed. Física': [0.00, -1.05, -8.13, -1.10, 10.28]
+                }
+            },
+            '9': {
+                current: {
+                    'Português': [0.00, 14.02, 62.80, 21.34, 1.83],
+                    'Inglês': [0.00, 14.02, 37.80, 26.83, 21.34],
+                    'Espanhol': [0.00, 1.14, 36.36, 59.09, 3.41],
+                    'Francês': [0.00, 0.00, 50.57, 36.00, 13.33],
+                    'História': [0.00, 2.47, 43.21, 13.58, 40.74],
+                    'Geografia': [0.00, 0.60, 33.54, 45.73, 20.73],
+                    'Matemática': [0.61, 38.41, 39.02, 7.32, 14.63],
+                    'Ciências Naturais': [0.00, 1.22, 47.56, 10.98, 40.24],
+                    'Físico-Química': [0.00, 9.88, 44.44, 38.89, 6.79],
+                    'Ed. Visual': [1.23, 0.61, 44.79, 38.65, 14.72],
+                    'Ed. Física': [1.22, 0.61, 31.71, 21.95, 44.51]
+                },
+                diff: {
+                    'Português': [0.00, -9.05, 7.18, 0.05, 1.81],
+                    'Inglês': [0.00, 6.88, -4.46, 2.42, -4.85],
+                    'Espanhol': [0.00, 0.28, -9.79, 14.65, -5.14],
+                    'Francês': [0.00, 0.00, 16.05, -2.46, -13.59],
+                    'História': [0.00, 5.81, -11.23, -2.99, 20.03],
+                    'Geografia': [0.00, 0.00, -6.11, -9.89, 16.00],
+                    'Matemática': [0.57, -14.84, 8.85, 3.39, 3.18],
+                    'Ciências Naturais': [0.00, 0.63, 23.30, -4.41, -19.52],
+                    'Físico-Química': [0.00, -3.81, -12.10, 0.84, 15.08],
+                    'Ed. Visual': [1.23, 0.58, -9.38, 1.03, 7.70],
+                    'Ed. Física': [1.22, 0.61, 7.45, -2.31, -5.97]
+                }
+            },
+            'ciclo': { // Aggregated approx
+                current: {
+                    'Português': [0.19, 15.00, 58.66, 20.54, 5.61],
+                    'Inglês': [13.25, 0.00, 45.86, 22.28, 18.60],
+                    'Espanhol': [0.00, 2.11, 36.11, 49.86, 11.93],
+                    'Francês': [3.55, 0.00, 52.09, 11.81, 32.54],
+                    'História': [0.00, 1.37, 43.62, 37.04, 17.97],
+                    'Geografia': [1.10, 0.00, 44.20, 16.26, 38.44],
+                    'Matemática': [0.20, 35.16, 39.96, 8.69, 15.99],
+                    'Ciências Naturais': [3.81, 0.00, 48.47, 11.89, 35.84],
+                    'Físico-Química': [5.29, 0.00, 47.17, 11.42, 36.13],
+                    'Ed. Visual': [0.41, 0.76, 33.47, 42.67, 22.69],
+                    'Ed. Física': [1.45, 0.78, 26.99, 23.67, 47.11]
+                },
+                diff: {
+                    'Português': [-0.02, -6.47, 6.57, 1.69, -1.77],
+                    'Inglês': [0.00, 1.05, 5.30, 4.60, -1.76],
+                    'Espanhol': [0.00, -5.81, -0.35, 5.04, -1.89],
+                    'Francês': [0.00, 0.33, 8.50, -3.75, -4.22],
+                    'História': [0.00, -14.00, -3.54, 11.03, 5.50],
+                    'Geografia': [0.00, -0.03, -1.07, 4.97, 3.87],
+                    'Matemática': [-0.73, -9.54, 6.51, 2.47, 1.28],
+                    'Ciências Naturais': [0.00, 2.25, 15.38, -3.58, -14.05],
+                    'Físico-Química': [0.00, 8.00, -7.68, 3.74, 11.94],
+                    'Ed. Visual': [0.41, -2.82, -15.71, 9.83, 8.29],
+                    'Ed. Física': [0.78, 0.50, -1.00, 2.23, -1.51]
+                }
+            }
+        };
+
+        // State
+        let currentGrade = '7';
+        let currentView = 'standard';
+        let chartInstance = null;
+
+        // Constants
+        const COLORS_STANDARD = [
+            '#EF4444', // L1 - Red
+            '#F97316', // L2 - Orange
+            '#EAB308', // L3 - Yellow
+            '#84CC16', // L4 - Lime
+            '#22C55E'  // L5 - Green
+        ];
+        
+        const COLOR_POS_GOOD = '#22C55E';
+        const COLOR_NEG_BAD = '#EF4444';
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDashboard();
+        });
+
+        // --- ACTIONS ---
+        function setGrade(grade) {
+            currentGrade = grade;
+            document.querySelectorAll('.grade-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${grade}`).classList.add('active');
+            updateDashboard();
+        }
+
+        function setView(view) {
+            currentView = view;
+            document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${view}`).classList.add('active');
+            updateDashboard();
+        }
+
+        // --- CORE LOGIC ---
+        function updateDashboard() {
+            const data = dataStore[currentGrade];
+            const subjects = Object.keys(data.current);
+
+            // 1. Update KPIs
+            updateKPIs(data, subjects);
+
+            // 2. Update Main Chart
+            updateMainChart(data, subjects);
+
+            // 3. Update Subject Grid
+            updateSubjectGrid(data, subjects);
+        }
+
+        function updateKPIs(data, subjects) {
+            let totalSuccess = 0; // L3+L4+L5
+            let totalQuality = 0; // L4+L5
+            let totalFailure = 0; // L1+L2
+            
+            let diffSuccess = 0;
+            let diffQuality = 0;
+            let diffFailure = 0;
+
+            let count = 0;
+
+            subjects.forEach(sub => {
+                const c = data.current[sub];
+                const d = data.diff[sub];
+                
+                // Current stats
+                const fail = c[0] + c[1];
+                const qual = c[3] + c[4];
+                const succ = c[2] + qual;
+
+                totalFailure += fail;
+                totalQuality += qual;
+                totalSuccess += succ;
+
+                // Diff stats
+                const dFail = d[0] + d[1];
+                const dQual = d[3] + d[4];
+                const dSucc = d[2] + dQual;
+
+                diffFailure += dFail;
+                diffQuality += dQual;
+                diffSuccess += dSucc;
+
+                count++;
+            });
+
+            // Calculate Averages
+            const avgSucc = (totalSuccess / count).toFixed(1);
+            const avgQual = (totalQuality / count).toFixed(1);
+            const avgFail = (totalFailure / count).toFixed(1);
+            
+            const avgDiffSucc = (diffSuccess / count).toFixed(1);
+            const avgDiffQual = (diffQuality / count).toFixed(1);
+            const avgDiffFail = (diffFailure / count).toFixed(1);
+
+            // Render
+            document.getElementById('kpi-success').innerText = avgSucc + '%';
+            renderDiff('kpi-success-diff', avgDiffSucc, true);
+
+            document.getElementById('kpi-quality').innerText = avgQual + '%';
+            renderDiff('kpi-quality-diff', avgDiffQual, true);
+
+            document.getElementById('kpi-failure').innerText = avgFail + '%';
+            renderDiff('kpi-failure-diff', avgDiffFail, false); // False means Increase is BAD
+        }
+
+        function renderDiff(id, value, isIncreaseGood) {
+            const el = document.getElementById(id);
+            const valNum = parseFloat(value);
+            const sign = valNum > 0 ? '+' : '';
+            
+            el.innerText = `${sign}${value}%`;
+            
+            // Logic: 
+            // If Increase is Good: Pos=Green, Neg=Red
+            // If Increase is Bad (Failure): Pos=Red, Neg=Green
+            
+            let colorClass = 'text-gray-500';
+            let icon = '';
+
+            if (valNum !== 0) {
+                if (isIncreaseGood) {
+                    colorClass = valNum > 0 ? 'text-green-600' : 'text-red-600';
+                    icon = valNum > 0 ? '<i class="fas fa-arrow-up ml-1"></i>' : '<i class="fas fa-arrow-down ml-1"></i>';
+                } else {
+                    colorClass = valNum > 0 ? 'text-red-600' : 'text-green-600';
+                    icon = valNum > 0 ? '<i class="fas fa-arrow-up ml-1"></i>' : '<i class="fas fa-arrow-down ml-1"></i>';
+                }
+            }
+            
+            el.className = `text-sm font-bold flex items-center ${colorClass}`;
+            el.innerHTML = `${sign}${value}% ${icon}`;
+        }
+
+        // --- CHART JS ---
+        function updateMainChart(data, subjects) {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            const legendContainer = document.getElementById('chart-legend');
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            if (currentView === 'standard') {
+                // STANDARD: Stacked Bar 1-5
+                document.getElementById('main-chart-title').innerText = 'Distribuição de Níveis (1 a 5)';
+                legendContainer.innerHTML = `
+                    <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-500 mr-1"></span> Nível 1</div>
+                    <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-orange-500 mr-1"></span> Nível 2</div>
+                    <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-yellow-500 mr-1"></span> Nível 3</div>
+                    <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-lime-500 mr-1"></span> Nível 4</div>
+                    <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-green-500 mr-1"></span> Nível 5</div>
+                `;
+
+                // Prepare datasets
+                const datasets = [0,1,2,3,4].map(idx => {
+                    return {
+                        label: `Nível ${idx+1}`,
+                        data: subjects.map(s => data.current[s][idx]),
+                        backgroundColor: COLORS_STANDARD[idx],
+                        barPercentage: 0.6,
+                    };
+                });
+
+                chartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: subjects,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { stacked: true, grid: { display: false } },
+                            y: { stacked: true, max: 100 }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { mode: 'index', intersect: false }
+                        }
+                    }
+                });
+
+            } else {
+                // DIFFERENTIAL: Diverging Bar (Change in Quality vs Failure)
+                document.getElementById('main-chart-title').innerText = 'Diferencial: Qualidade vs Insucesso';
+                legendContainer.innerHTML = `
+                    <div class="flex items-center"><span class="w-3 h-3 rounded bg-green-500 mr-1"></span> Qualidade (4+5)</div>
+                    <div class="flex items-center"><span class="w-3 h-3 rounded bg-red-500 mr-1"></span> Insucesso (1+2)</div>
+                `;
+
+                // Calculate Deltas
+                const deltaQual = subjects.map(s => {
+                    const d = data.diff[s];
+                    return (d[3] + d[4]).toFixed(1);
+                });
+
+                // For failure, we want to visually represent it. 
+                // Usually diverging charts share an axis. 
+                // Let's do: Quality Change on one bar. 
+                // This will be a simple bar chart where Positive = Green, Negative = Red.
+                
+                const backgroundColors = deltaQual.map(v => v >= 0 ? '#22C55E' : '#EF4444');
+
+                chartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: subjects,
+                        datasets: [{
+                            label: 'Variação da Taxa de Qualidade (%)',
+                            data: deltaQual,
+                            backgroundColor: backgroundColors,
+                            barPercentage: 0.6
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y', // Horizontal bars for diverging feel
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { 
+                                grid: { color: '#e5e7eb' },
+                                title: { display: true, text: 'Variação Percentual (p.p.)' }
+                            },
+                            y: { grid: { display: false } }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.x !== null) {
+                                            label += (context.parsed.x > 0 ? '+' : '') + context.parsed.x + '%';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // --- SUBJECT GRID ---
+        function updateSubjectGrid(data, subjects) {
+            const container = document.getElementById('subject-grid');
+            container.innerHTML = '';
+
+            subjects.forEach(sub => {
+                const c = data.current[sub];
+                const d = data.diff[sub];
+
+                // Calculate metrics
+                const failRate = (c[0] + c[1]).toFixed(1);
+                const qualRate = (c[3] + c[4]).toFixed(1);
+                
+                const diffQual = (d[3] + d[4]); // Number
+                const diffQualStr = diffQual.toFixed(1);
+                
+                // Color Logic for Card Header
+                // If Quality Diff is positive -> Green border
+                const borderColor = diffQual >= 0 ? 'border-green-500' : 'border-red-500';
+                const diffColor = diffQual >= 0 ? 'text-green-600' : 'text-red-600';
+                const diffIcon = diffQual >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
+
+                let cardContent = '';
+
+                if (currentView === 'standard') {
+                    // Mini Distribution Bar
+                    const bars = c.map((val, idx) => `
+                        <div class="h-full" style="width: ${val}%; background-color: ${COLORS_STANDARD[idx]}" title="Nível ${idx+1}: ${val}%"></div>
+                    `).join('');
+
+                    cardContent = `
+                        <div class="mt-4">
+                            <div class="flex justify-between text-xs text-gray-500 mb-1">
+                                <span>Insucesso: ${failRate}%</span>
+                                <span>Qualidade: ${qualRate}%</span>
+                            </div>
+                            <div class="h-2 w-full bg-gray-200 rounded-full overflow-hidden flex">
+                                ${bars}
+                            </div>
+                            <div class="flex justify-between text-[10px] text-gray-400 mt-1">
+                                <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Differential View in Card: Show breakdown of L1+2, L3, L4+5
+                    const dFail = (d[0] + d[1]).toFixed(1);
+                    const dSucc = (d[2]).toFixed(1); // L3
+                    const dQual = (d[3] + d[4]).toFixed(1);
+
+                    // Colors
+                    const colFail = parseFloat(dFail) > 0 ? 'text-red-500' : 'text-green-500'; // Increase in failure is bad
+                    const colQual = parseFloat(dQual) > 0 ? 'text-green-500' : 'text-red-500'; // Increase in quality is good
+
+                    cardContent = `
+                        <div class="mt-4 space-y-2">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-500">Insucesso (1-2)</span>
+                                <span class="font-bold ${colFail}">${parseFloat(dFail) > 0 ? '+' : ''}${dFail}%</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-gray-500">Qualidade (4-5)</span>
+                                <span class="font-bold ${colQual}">${parseFloat(dQual) > 0 ? '+' : ''}${dQual}%</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-gray-100">
+                             <div class="w-full bg-gray-100 rounded h-1.5 overflow-hidden flex relative">
+                                <!-- Center Line -->
+                                <div class="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gray-300 z-10"></div>
+                                <!-- Visual Bar for Net Quality Change -->
+                                ${diffQual > 0 
+                                    ? `<div class="h-full bg-green-500 absolute left-1/2" style="width: ${Math.min(diffQual*2, 50)}%"></div>`
+                                    : `<div class="h-full bg-red-500 absolute right-1/2" style="width: ${Math.min(Math.abs(diffQual)*2, 50)}%"></div>`
+                                }
+                             </div>
+                             <p class="text-[10px] text-center text-gray-400 mt-1">Variação Qualidade</p>
+                        </div>
+                    `;
+                }
+
+                const cardHtml = `
+                    <div class="card p-5 border-t-4 ${borderColor}">
+                        <div class="flex justify-between items-start">
+                            <h4 class="font-bold text-gray-800">${sub}</h4>
+                            <span class="text-xs font-bold ${diffColor} bg-gray-50 px-2 py-1 rounded">
+                                <i class="fas ${diffIcon} mr-1"></i>${diffQualStr}% (Q)
+                            </span>
+                        </div>
+                        ${cardContent}
+                    </div>
+                `;
+                
+                container.innerHTML += cardHtml;
+            });
+        }
+    </script>
+</body>
+</html>
